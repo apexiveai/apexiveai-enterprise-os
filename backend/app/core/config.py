@@ -1,4 +1,5 @@
-﻿from pathlib import Path
+﻿
+from pathlib import Path
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,39 +16,38 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "APEXIVEAI-ENTERPRISE-OS"
+    app_name: str = "APEXIVEAI ENTERPRISE OS"
     app_version: str = "1.0.0"
     environment: str = "development"
 
-    database_url: str
-    redis_url: str
+    database_url: str = "sqlite:///./apexiveai.db"
+    redis_url: str | None = None
 
     @field_validator("database_url", mode="before")
     @classmethod
-    def normalize_database_url(cls, value: str) -> str:
+    def normalize_database_url(cls, value):
+        if not value:
+            return "sqlite:///./apexiveai.db"
+
         if isinstance(value, str):
-            if value.startswith("postgres://"):
-                return value.replace(
-                    "postgres://",
-                    "postgresql+psycopg://",
-                    1,
-                )
+            replacements = (
+                ("postgres://", "postgresql+psycopg://"),
+                ("postgresql://", "postgresql+psycopg://"),
+                ("postgresql+psycopg2://", "postgresql+psycopg://"),
+            )
 
-            if value.startswith("postgresql://"):
-                return value.replace(
-                    "postgresql://",
-                    "postgresql+psycopg://",
-                    1,
-                )
-
-            if value.startswith("postgresql+psycopg2://"):
-                return value.replace(
-                    "postgresql+psycopg2://",
-                    "postgresql+psycopg://",
-                    1,
-                )
+            for old, new in replacements:
+                if value.startswith(old):
+                    return value.replace(old, new, 1)
 
         return value
+
+    @field_validator("redis_url", mode="before")
+    @classmethod
+    def normalize_redis_url(cls, value):
+        if value is None or not str(value).strip():
+            return None
+        return str(value).strip()
 
 
 settings = Settings()

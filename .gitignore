@@ -1,0 +1,9 @@
+.env
+__pycache__/
+.pytest_cache/
+*.py[cod]
+build/
+dist/
+data/
+*.db
+.venv-desktop/

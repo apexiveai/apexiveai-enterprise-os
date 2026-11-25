@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Activity, Bell, Boxes, BriefcaseBusiness, ChevronDown,
   CircleGauge, ClipboardCheck, Cloud, Cpu, Database, Factory,
@@ -10,6 +10,7 @@ import {
   AlertTriangle, Clock3, Copy, Rocket, RotateCcw, ChevronRight,
   GitBranch, Radio,
 } from 'lucide-react'
+import IndustrialOperations from './modules/industrial/IndustrialOperations'
 
 type IconType = typeof LayoutDashboard
 
@@ -40,6 +41,16 @@ const navSections: Array<{ title: string; items: Array<{ label: string; icon: Ic
     { label: 'RPA Orchestrator', icon: Radio },
     { label: 'Security', icon: ShieldCheck },
     { label: 'Reports & Analytics', icon: CircleGauge },
+  ] },
+  { title: 'INDUSTRIAL OPERATIONS', items: [
+    { label: 'Robotics Fleet Management', icon: Truck },
+    { label: 'Industrial OT Integration', icon: Radio },
+    { label: 'IoT & Edge Gateway', icon: Database },
+    { label: 'Robotic Process Control', icon: Cpu },
+    { label: 'Drone & Inspection Management', icon: Plane },
+    { label: 'Fleet & Logistics Automation', icon: Workflow },
+    { label: 'Asset & Predictive Maintenance', icon: Activity },
+    { label: 'Enterprise Operations Command Center', icon: Gauge },
   ] },
   { title: 'ENTERPRISE SUITES', items: [
     { label: 'AI Bot Studio', icon: Sparkles },
@@ -97,13 +108,70 @@ const enterpriseSuiteNames = [
   'Advanced Automation',
 ]
 
+const studioCatalogGroups: Array<{
+  title: string
+  items: Array<{ label: string; description: string; icon: IconType }>
+}> = [
+  {
+    title: 'Intelligence & AI',
+    items: [
+      { label: 'AI Bot Studio', description: 'Build and manage AI assistants', icon: Sparkles },
+      { label: 'Intelligent Documents', description: 'Extract and validate document data', icon: FileText },
+      { label: 'Agentic Process Automation', description: 'Coordinate agents, workflows, and RPA', icon: Workflow },
+      { label: 'Advanced Automation', description: 'Automate tasks with AI and vision', icon: Cpu },
+    ],
+  },
+  {
+    title: 'Process & Integration',
+    items: [
+      { label: 'Workflow Studio', description: 'Design and manage business workflows', icon: GitBranch },
+      { label: 'Process & Task Mining', description: 'Discover bottlenecks and process variants', icon: CircleGauge },
+      { label: 'Integration Studio', description: 'Connect APIs, services, and events', icon: Cloud },
+      { label: 'Decision & Rules', description: 'Manage policies and decision logic', icon: ClipboardCheck },
+    ],
+  },
+  {
+    title: 'Analytics & Operations',
+    items: [
+      { label: 'Reports & Analytics', description: 'Explore enterprise performance data', icon: Activity },
+      { label: 'Automation Center', description: 'Monitor automation operations', icon: Radio },
+      { label: 'Automation Quality', description: 'Test and measure automation quality', icon: ShieldCheck },
+      { label: 'Enterprise Data', description: 'Manage trusted data and governance', icon: Database },
+    ],
+  },
+  {
+    title: 'Advanced & Ecosystem',
+    items: [
+      { label: 'Digital Twin', description: 'Model assets and simulate operations', icon: Boxes },
+      { label: 'Workforce & Collaboration', description: 'Coordinate teams, skills, and approvals', icon: Users },
+      { label: 'Security & Governance', description: 'Manage identity, policies, and audit', icon: ShieldCheck },
+      { label: 'Enterprise Marketplace', description: 'Discover reusable enterprise solutions', icon: Package },
+    ],
+  },
+]
+
+const industrialModuleNames = [
+  'Robotics Fleet Management',
+  'Industrial OT Integration',
+  'IoT & Edge Gateway',
+  'Robotic Process Control',
+  'Drone & Inspection Management',
+  'Fleet & Logistics Automation',
+  'Asset & Predictive Maintenance',
+  'Enterprise Operations Command Center',
+] as const
+
+function isIndustrialModule(value: string): value is typeof industrialModuleNames[number] {
+  return industrialModuleNames.some((name) => name === value)
+}
+
 function formatTime(date: Date) {
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 }
 
 function App() {
-  const [dark, setDark] = useState(false)
-  const [active, setActive] = useState('Dashboard')
+  const [dark, setDark] = useState(true)
+  const [active, setActive] = useState('AI Bot Studio')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [assistantOpen, setAssistantOpen] = useState(true)
@@ -281,8 +349,10 @@ function App() {
             <RPAOrchestrator />
           ) : active === 'Workflow Studio' ? (
             <WorkflowAutomationStudio />
+          ) : isIndustrialModule(active) ? (
+            <IndustrialOperations section={active} onNavigate={navigate} />
           ) : enterpriseSuiteNames.includes(active) ? (
-            <EnterpriseAutomationSuite name={active} />
+            <EnterpriseAutomationSuite key={active} name={active} onNavigate={navigate} />
           ) : (
             <ModuleView
               name={moduleName}
@@ -436,7 +506,29 @@ function DashboardView({
   )
 }
 
-function EnterpriseAutomationSuite({ name }: { name: string }) {
+function EnterpriseAutomationSuite({ name, onNavigate }: {
+  name: string
+  onNavigate: (label: string) => void
+}) {
+  type SuiteAsset = {
+    id: string
+    name: string
+    status: 'Draft' | 'Ready'
+    updated: string
+    features: string[]
+  }
+  type SuiteRun = {
+    id: string
+    asset: string
+    status: 'Simulated'
+    updated: string
+  }
+  type BuilderSettings = {
+    name: string
+    environment: string
+    nodes: string[]
+  }
+
   const suiteFeatures: Record<string, string[]> = {
     'AI Bot Studio': ['Bot Templates', 'Knowledge Base', 'Natural Language', 'Channels', 'Conversation Testing', 'Agent Tools'],
     'Agentic Process Automation': ['AI + RPA + Workflow', 'Autonomous Agents', 'Human-in-the-loop', 'Task Planning', 'Decision Control', 'Execution Evidence'],
@@ -455,23 +547,152 @@ function EnterpriseAutomationSuite({ name }: { name: string }) {
     'Advanced Automation': ['Computer Vision', 'LLM Actions', 'Speech', 'Self-Healing', 'Edge Runtime', 'Robotics'],
   }
   const features = suiteFeatures[name] || ['Overview', 'Builder', 'Models', 'Runs', 'Analytics', 'Administration']
+  const storagePrefix = `apexive-suite-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
   const [activeTab, setActiveTab] = useState('Overview')
   const [toast, setToast] = useState('')
   const [search, setSearch] = useState('')
+  const [assetDialogOpen, setAssetDialogOpen] = useState(false)
+  const [newAssetName, setNewAssetName] = useState('')
+  const [assets, setAssets] = useState<SuiteAsset[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`${storagePrefix}-assets`) || '[]')
+      return Array.isArray(saved) ? saved : []
+    } catch {
+      return []
+    }
+  })
+  const [runs, setRuns] = useState<SuiteRun[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`${storagePrefix}-runs`) || '[]')
+      return Array.isArray(saved) ? saved : []
+    } catch {
+      return []
+    }
+  })
+  const [builder, setBuilder] = useState<BuilderSettings>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`${storagePrefix}-builder`) || 'null')
+      if (saved && typeof saved.name === 'string' && Array.isArray(saved.nodes)) return saved
+    } catch {
+      return { name, environment: 'Development', nodes: [] }
+    }
+    return { name, environment: 'Development', nodes: [] }
+  })
 
-  const notify = (message: string) => {
+  const notify = useCallback((message: string) => {
     setToast(message)
     window.setTimeout(() => setToast(''), 2200)
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${storagePrefix}-assets`, JSON.stringify(assets))
+      localStorage.setItem(`${storagePrefix}-runs`, JSON.stringify(runs))
+      localStorage.setItem(`${storagePrefix}-builder`, JSON.stringify(builder))
+    } catch (error) {
+      console.error(`Could not save ${name} workspace`, error)
+    }
+  }, [assets, builder, name, runs, storagePrefix])
+
+  const createAsset = () => {
+    setNewAssetName(`${name} Asset ${assets.length + 1}`)
+    setAssetDialogOpen(true)
+  }
+
+  const saveAsset = () => {
+    const assetName = newAssetName.trim()
+    if (!assetName) {
+      notify('Enter a name for the asset')
+      return
+    }
+    setAssets((current) => [
+      ...current,
+      {
+        id: `asset-${current.reduce((latest, item) => {
+          const number = Number(item.id.replace('asset-', ''))
+          return Number.isInteger(number) ? Math.max(latest, number) : latest
+        }, 0) + 1}`,
+        name: assetName,
+        status: 'Draft',
+        updated: 'Just now',
+        features: [],
+      },
+    ])
+    setAssetDialogOpen(false)
+    setActiveTab('Assets')
+    notify(`${assetName} saved to this workspace`)
+  }
+
+  const saveBuilder = () => {
+    setAssets((current) => {
+      const savedAsset: SuiteAsset = {
+        id: 'builder',
+        name: builder.name.trim() || name,
+        status: 'Draft',
+        updated: 'Just now',
+        features: builder.nodes,
+      }
+      return current.some((asset) => asset.id === savedAsset.id)
+        ? current.map((asset) => asset.id === savedAsset.id ? savedAsset : asset)
+        : [...current, savedAsset]
+    })
+    notify(`${builder.name || name} configuration saved`)
+  }
+
+  const simulateRun = () => {
+    const asset = assets[0]
+    if (!asset) {
+      notify('Create or save an asset before running it')
+      setActiveTab('Assets')
+      return
+    }
+    setRuns((current) => [
+      {
+        id: `run-${current.length + 1}`,
+        asset: asset.name,
+        status: 'Simulated',
+        updated: 'Just now',
+      },
+      ...current,
+    ])
+    setActiveTab('Runs')
+    notify(`${asset.name} simulation recorded`)
+  }
+
+  const exportWorkspace = () => {
+    const data = activeTab === 'Runs' ? runs : assets
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `${storagePrefix}-${activeTab.toLowerCase()}.json`
+    anchor.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
     <div className="enterprise-suite">
       {toast && <div className="studio-toast"><CheckCircle2 size={16} /> {toast}</div>}
+      {assetDialogOpen && (
+        <div className="studio-modal-backdrop" onMouseDown={() => setAssetDialogOpen(false)}>
+          <div className="studio-modal" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="studio-modal-header">
+              <div><small>WORKSPACE ASSET</small><h2>Create {name} Asset</h2></div>
+              <button onClick={() => setAssetDialogOpen(false)} aria-label="Close"><X size={16} /></button>
+            </div>
+            <label>Asset name<input autoFocus value={newAssetName} onChange={(event) => setNewAssetName(event.target.value)} /></label>
+            <div className="studio-modal-actions">
+              <button onClick={() => setAssetDialogOpen(false)}>Cancel</button>
+              <button className="primary" onClick={saveAsset}>Create Asset</button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="suite-header">
         <div><span>ENTERPRISE AUTOMATION SUITE</span><h1>{name}</h1></div>
         <div className="suite-actions">
           <label><Search size={13} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search workspace" /></label>
-          <button onClick={() => notify(`New ${name} asset created`)}><Plus size={14} /> Create New</button>
+          <button onClick={createAsset}><Plus size={14} /> Create New</button>
         </div>
       </header>
       <nav className="suite-tabs">
@@ -480,66 +701,130 @@ function EnterpriseAutomationSuite({ name }: { name: string }) {
         ))}
       </nav>
       <div className="suite-content">
-        <section className="suite-kpis">
-          {[
-            ['Active Assets', '24', '+8%'],
-            ['Successful Runs', '1,842', '+12%'],
-            ['Automation Value', 'MMK 84M', '+18%'],
-            ['System Health', '99.2%', 'Healthy'],
-          ].map(([label, value, change]) => (
-            <article key={label}><span>{label}</span><strong>{value}</strong><small>{change}</small></article>
-          ))}
-        </section>
+        {(name !== 'AI Bot Studio' || activeTab !== 'Overview') && (
+          <section className="suite-kpis">
+            {[
+              ['Workspace Assets', String(assets.length), 'Saved locally'],
+              ['Simulated Runs', String(runs.length), 'Local tests'],
+              ['Builder Steps', String(builder.nodes.length), 'Configured'],
+              ['Connection', 'Local', 'No live services'],
+            ].map(([label, value, change]) => (
+              <article key={label}><span>{label}</span><strong>{value}</strong><small>{change}</small></article>
+            ))}
+          </section>
+        )}
 
         {activeTab === 'Overview' && (
-          <div className="suite-overview">
-            <section className="suite-feature-grid">
-              {features.filter((feature) => !search || feature.toLowerCase().includes(search.toLowerCase())).map((feature, index) => (
-                <button key={feature} onClick={() => { setActiveTab('Builder'); notify(`${feature} workspace opened`) }}>
-                  <span>{String(index + 1).padStart(2, '0')}</span>
-                  <div><strong>{feature}</strong><small>Configure and manage enterprise automation</small></div>
-                  <ChevronRight size={14} />
-                </button>
-              ))}
-            </section>
-            <aside className="suite-insights">
-              <strong>Recent Activity</strong>
-              {[
-                ['Asset deployed', '12 minutes ago', 'green'],
-                ['Model validation passed', '38 minutes ago', 'cyan'],
-                ['Run requires review', '1 hour ago', 'amber'],
-              ].map(([title, time, color]) => (
-                <div key={title}><i className={color} /><span><b>{title}</b><small>{time}</small></span></div>
-              ))}
-            </aside>
-          </div>
+          name === 'AI Bot Studio' ? (
+            <div className="suite-catalog-layout">
+              <div className="suite-catalog-groups">
+                {studioCatalogGroups.map((group) => {
+                  const items = group.items.filter((item) =>
+                    !search || `${item.label} ${item.description}`.toLowerCase().includes(search.toLowerCase())
+                  )
+                  if (items.length === 0) return null
+                  return (
+                    <section className="suite-catalog-group" key={group.title}>
+                      <h2>{group.title}</h2>
+                      <div>
+                        {items.map(({ label, description, icon: Icon }) => (
+                          <button key={label} onClick={() => onNavigate(label)}>
+                            <span><Icon size={16} /></span>
+                            <div><strong>{label}</strong><small>{description}</small></div>
+                            <ChevronRight size={14} />
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )
+                })}
+                {studioCatalogGroups.every((group) =>
+                  group.items.every((item) => !`${item.label} ${item.description}`.toLowerCase().includes(search.toLowerCase()))
+                ) && <p className="suite-catalog-empty">No suites match your search.</p>}
+              </div>
+              <aside className="suite-insights">
+                <strong>Recent Activity</strong>
+                {runs.length === 0 && assets.length === 0 && <p>No workspace activity yet.</p>}
+                {assets.slice(-3).reverse().map((asset) => (
+                  <div key={asset.id}><i className="cyan" /><span><b>Asset saved</b><small>{asset.name} · {asset.updated}</small></span></div>
+                ))}
+                {runs.slice(0, 3).map((run) => (
+                  <div key={run.id}><i className="green" /><span><b>Simulation recorded</b><small>{run.asset} · {run.updated}</small></span></div>
+                ))}
+              </aside>
+            </div>
+          ) : (
+            <div className="suite-overview">
+              <section className="suite-feature-grid">
+                {features.filter((feature) => !search || feature.toLowerCase().includes(search.toLowerCase())).map((feature, index) => (
+                  <button key={feature} onClick={() => { setActiveTab('Builder'); notify(`${feature} workspace opened`) }}>
+                    <span>{String(index + 1).padStart(2, '0')}</span>
+                    <div><strong>{feature}</strong><small>Configure and manage enterprise automation</small></div>
+                    <ChevronRight size={14} />
+                  </button>
+                ))}
+              </section>
+              <aside className="suite-insights">
+                <strong>Recent Activity</strong>
+                {runs.length === 0 && assets.length === 0 && <p>No workspace activity yet.</p>}
+                {assets.slice(-3).reverse().map((asset) => (
+                  <div key={asset.id}><i className="cyan" /><span><b>Asset saved</b><small>{asset.name} · {asset.updated}</small></span></div>
+                ))}
+                {runs.slice(0, 3).map((run) => (
+                  <div key={run.id}><i className="green" /><span><b>Simulation recorded</b><small>{run.asset} · {run.updated}</small></span></div>
+                ))}
+              </aside>
+            </div>
+          )
         )}
 
         {activeTab === 'Builder' && (
           <div className="suite-builder">
-            <aside><strong>Toolbox</strong>{features.slice(0, 5).map((feature) => <button key={feature} onClick={() => notify(`${feature} activity added`)}><Plus size={12} /> {feature}</button>)}</aside>
+            <aside><strong>Toolbox</strong>{features.slice(0, 5).map((feature) => <button key={feature} onClick={() => setBuilder((current) => ({ ...current, nodes: [...current.nodes, feature] }))}><Plus size={12} /> {feature}</button>)}</aside>
             <main>
               <div className="suite-builder-heading"><strong>{name} Canvas</strong><span>Draft</span></div>
               <div className="suite-builder-canvas">
-                {features.slice(0, 6).map((feature, index) => (
-                  <button key={feature}><span>{String(index + 1)}</span><strong>{feature}</strong><small>Enterprise capability</small></button>
+                {builder.nodes.length === 0 && <p>Select toolbox activities to add builder steps.</p>}
+                {builder.nodes.map((feature, index) => (
+                  <button key={`${feature}-${index}`} onClick={() => setBuilder((current) => ({ ...current, nodes: current.nodes.filter((_, nodeIndex) => nodeIndex !== index) }))}><span>{String(index + 1)}</span><strong>{feature}</strong><small>Click to remove</small></button>
                 ))}
               </div>
             </main>
-            <aside><strong>Properties</strong><label>Name<input defaultValue={name} /></label><label>Environment<select defaultValue="production"><option>Development</option><option>Staging</option><option>Production</option></select></label><button onClick={() => notify('Configuration saved')}>Save</button></aside>
+            <aside><strong>Properties</strong><label>Name<input value={builder.name} onChange={(event) => setBuilder((current) => ({ ...current, name: event.target.value }))} /></label><label>Environment<select value={builder.environment} onChange={(event) => setBuilder((current) => ({ ...current, environment: event.target.value }))}><option>Development</option><option>Staging</option><option>Production</option></select></label><button onClick={saveBuilder}>Save</button></aside>
           </div>
         )}
 
         {(activeTab === 'Assets' || activeTab === 'Runs' || activeTab === 'Analytics' || activeTab === 'Settings') && (
           <div className="suite-data-view">
-            <div className="suite-data-toolbar"><strong>{activeTab}</strong><button onClick={() => notify(`${activeTab} exported`)}>Export</button></div>
-            {[
-              [`${name} Production Asset`, 'Active', 'Today'],
-              [`${name} Test Asset`, 'Validated', 'Yesterday'],
-              [`${name} Template`, 'Published', 'Nov 20'],
-            ].map(([title, status, date]) => (
-              <div className="suite-data-row" key={title}><span><FileText size={15} /></span><strong>{title}</strong><b>{status}</b><small>{date}</small><button onClick={() => notify(`${title} opened`)}><ChevronRight size={13} /></button></div>
+            <div className="suite-data-toolbar">
+              <strong>{activeTab}</strong>
+              {activeTab === 'Runs' && <button onClick={simulateRun}><Play size={13} /> Simulate Run</button>}
+              {activeTab === 'Assets' && <button onClick={createAsset}><Plus size={13} /> Add Asset</button>}
+              {(activeTab === 'Assets' || activeTab === 'Runs') && <button onClick={exportWorkspace}>Export JSON</button>}
+            </div>
+            {activeTab === 'Assets' && assets.filter((asset) => asset.name.toLowerCase().includes(search.toLowerCase())).map((asset) => (
+              <div className="suite-data-row" key={asset.id}><span><FileText size={15} /></span><strong>{asset.name}</strong><b>{asset.status}</b><small>{asset.updated} · {asset.features.length} steps</small><button onClick={() => setAssets((current) => current.filter((item) => item.id !== asset.id))} title="Delete asset"><X size={13} /></button></div>
             ))}
+            {activeTab === 'Runs' && runs.map((run) => (
+              <div className="suite-data-row" key={run.id}><span><Play size={15} /></span><strong>{run.asset}</strong><b>{run.status}</b><small>{run.updated}</small><span>{run.id}</span></div>
+            ))}
+            {activeTab === 'Analytics' && (
+              <div className="suite-kpis">
+                <article><span>Saved Assets</span><strong>{assets.length}</strong><small>Stored in this browser</small></article>
+                <article><span>Simulation Runs</span><strong>{runs.length}</strong><small>Not connected to live systems</small></article>
+                <article><span>Configured Steps</span><strong>{builder.nodes.length}</strong><small>{builder.environment}</small></article>
+              </div>
+            )}
+            {activeTab === 'Settings' && (
+              <div className="suite-settings">
+                <strong>Workspace settings</strong>
+                <label>Default asset name<input value={builder.name} onChange={(event) => setBuilder((current) => ({ ...current, name: event.target.value }))} /></label>
+                <label>Environment<select value={builder.environment} onChange={(event) => setBuilder((current) => ({ ...current, environment: event.target.value }))}><option>Development</option><option>Staging</option><option>Production</option></select></label>
+                <button onClick={() => notify('Workspace settings saved locally')}>Save Settings</button>
+              </div>
+            )}
+            {activeTab === 'Assets' && assets.length === 0 && <p className="suite-empty">No saved assets yet. Create one to begin.</p>}
+            {activeTab === 'Runs' && runs.length === 0 && <p className="suite-empty">No simulations yet. Save an asset, then run a local simulation.</p>}
           </div>
         )}
       </div>
@@ -738,11 +1023,18 @@ function WorkflowAutomationStudio() {
     type: 'Start' | 'User' | 'AI' | 'Robot' | 'API' | 'Decision' | 'Parallel' | 'Timer' | 'Subprocess' | 'End'
     name: string
   }
+  type WorkflowRecord = {
+    workflow_id: string
+    status: string
+    nodes: ProcessNode[]
+  }
 
   const [activeTab, setActiveTab] = useState<WorkflowTab>('Designer')
   const [selectedNode, setSelectedNode] = useState('approval')
   const [toast, setToast] = useState('')
   const [deployed, setDeployed] = useState(false)
+  const [workflowId, setWorkflowId] = useState('')
+  const [workflowLoaded, setWorkflowLoaded] = useState(false)
   const [nodes, setNodes] = useState<ProcessNode[]>([
     { id: 'start', type: 'Start', name: 'Purchase Request' },
     { id: 'validate', type: 'API', name: 'Validate Budget API' },
@@ -764,8 +1056,86 @@ function WorkflowAutomationStudio() {
     window.setTimeout(() => setToast(''), 2600)
   }
 
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/v1/workflow/definitions')
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Workflow service returned ${response.status}`)
+        return response.json() as Promise<WorkflowRecord[]>
+      })
+      .then((workflows) => {
+        if (cancelled) return
+        if (workflows.length > 0) {
+          const workflow = workflows[0]
+          setWorkflowId(workflow.workflow_id)
+          setDeployed(workflow.status === 'deployed')
+          setNodes(workflow.nodes)
+          if (workflow.nodes.length > 0) setSelectedNode(workflow.nodes[0].id)
+        }
+        setWorkflowLoaded(true)
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setWorkflowLoaded(true)
+          notify(`Workflow service unavailable: ${error instanceof Error ? error.message : String(error)}`)
+        }
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  const saveWorkflow = async () => {
+    const response = await fetch(
+      workflowId ? `/api/v1/workflow/definitions/${workflowId}` : '/api/v1/workflow/definitions',
+      {
+        method: workflowId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Purchase Approval',
+          description: 'Purchase request validation and approval workflow.',
+          nodes,
+        }),
+      },
+    )
+    if (!response.ok) throw new Error(`Could not save workflow (${response.status})`)
+    const workflow = await response.json() as WorkflowRecord
+    setWorkflowId(workflow.workflow_id)
+    return workflow
+  }
+
+  const runWorkflow = async () => {
+    const workflow = await saveWorkflow()
+    const response = await fetch(
+      `/api/v1/workflow/executions?workflow_id=${encodeURIComponent(workflow.workflow_id)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    )
+    if (!response.ok) throw new Error(`Could not start workflow (${response.status})`)
+    const execution = await response.json() as { execution_id: string }
+    notify(`Workflow execution started: ${execution.execution_id}`)
+  }
+
+  const deployWorkflow = async () => {
+    const workflow = await saveWorkflow()
+    const response = await fetch(`/api/v1/workflow/definitions/${workflow.workflow_id}/deploy`, {
+      method: 'POST',
+    })
+    if (!response.ok) throw new Error(`Could not deploy workflow (${response.status})`)
+    const deployedWorkflow = await response.json() as WorkflowRecord
+    setDeployed(deployedWorkflow.status === 'deployed')
+    notify(`Workflow version ${deployedWorkflow.status === 'deployed' ? 'deployed' : 'saved'}`)
+  }
+
+  const runWithNotification = (action: () => Promise<void>, label: string) => {
+    void action().catch((error: unknown) => {
+      notify(`${label}: ${error instanceof Error ? error.message : String(error)}`)
+    })
+  }
+
   const addNode = (type: ProcessNode['type']) => {
-    const id = `${type.toLowerCase()}-${Date.now()}`
+    const id = `${type.toLowerCase()}-${nodes.length + 1}`
     setNodes((current) => [...current, { id, type, name: `New ${type} Task` }])
     setSelectedNode(id)
     notify(`${type} node added to the process`)
@@ -790,8 +1160,8 @@ function WorkflowAutomationStudio() {
       <header className="workflow-header">
         <div><span>BUSINESS PROCESS AUTOMATION</span><h1>Workflow Automation Studio</h1></div>
         <div className="workflow-actions">
-          <button onClick={() => notify('Workflow simulation started')}><Play size={14} /> Simulate</button>
-          <button onClick={() => { setDeployed(true); notify('Workflow version 3.2 deployed successfully') }}><Rocket size={14} /> Deploy</button>
+          <button disabled={!workflowLoaded} onClick={() => runWithNotification(runWorkflow, 'Simulation failed')}><Play size={14} /> Simulate</button>
+          <button disabled={!workflowLoaded} onClick={() => runWithNotification(deployWorkflow, 'Deployment failed')}><Rocket size={14} /> Deploy</button>
           <span className={`workflow-deploy-status ${deployed ? 'active' : ''}`}><i /> {deployed ? 'Deployed v3.2' : 'Draft v3.2'}</span>
         </div>
       </header>
@@ -951,7 +1321,7 @@ function WorkflowAutomationStudio() {
 
       {activeTab === 'Simulation' && (
         <div className="process-simulation">
-          <section><span><Activity size={18} /></span><div><strong>Workflow Simulation</strong><p>Run a test instance with simulated human and external responses.</p></div><button onClick={() => notify('Simulation completed: 8 steps, 1 human task, 0 SLA violations')}>Run Simulation</button></section>
+          <section><span><Activity size={18} /></span><div><strong>Workflow Simulation</strong><p>Run a test instance with simulated human and external responses.</p></div><button disabled={!workflowLoaded} onClick={() => runWithNotification(runWorkflow, 'Simulation failed')}>Run Simulation</button></section>
           <div className="simulation-metrics">
             {[['Steps', '8'], ['Branch Coverage', '87%'], ['SLA Risk', 'Low'], ['Recovery Point', '1']].map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}
           </div>
