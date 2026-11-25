@@ -1,0 +1,58 @@
+﻿
+name: max-enterprise-os
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: max-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: max_enterprise
+      POSTGRES_USER: max
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      TZ: Asia/Yangon
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U max -d max_enterprise
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - max-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: max-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - max-network
+
+volumes:
+  postgres_data:
+    name: max-postgres-data
+  redis_data:
+    name: max-redis-data
+
+networks:
+  max-network:
+    name: max-enterprise-network
+    driver: bridge
