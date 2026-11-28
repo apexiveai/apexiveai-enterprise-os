@@ -162,6 +162,14 @@ class WorkflowService:
             }
 
             self.executions[execution_id] = execution
+            for node in self.workflows[workflow_id].get("nodes", []):
+                if node.get("type") == "User":
+                    properties = node.get("properties") or {}
+                    self._create_human_task(
+                        execution_id,
+                        node.get("name") or "Human approval",
+                        properties.get("assignee") or "Unassigned",
+                    )
             self._persist()
 
             return execution
@@ -177,20 +185,26 @@ class WorkflowService:
         assignee: str,
     ) -> dict:
         with self._lock:
-            task_id = str(uuid4())
-
-            task = {
-                "task_id": task_id,
-                "execution_id": execution_id,
-                "name": name,
-                "assignee": assignee,
-                "status": "pending",
-            }
-
-            self.human_tasks[task_id] = task
+            task = self._create_human_task(execution_id, name, assignee)
             self._persist()
-
             return task
+
+    def _create_human_task(
+        self,
+        execution_id: str,
+        name: str,
+        assignee: str,
+    ) -> dict:
+        task_id = str(uuid4())
+        task = {
+            "task_id": task_id,
+            "execution_id": execution_id,
+            "name": name,
+            "assignee": assignee,
+            "status": "pending",
+        }
+        self.human_tasks[task_id] = task
+        return task
 
     def list_human_tasks(self) -> list[dict]:
         with self._lock:

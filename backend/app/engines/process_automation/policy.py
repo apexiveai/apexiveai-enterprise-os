@@ -1,7 +1,8 @@
+﻿from dataclasses import dataclass
 
-from dataclasses import dataclass
+from app.engines.process_automation.contracts import ProcessStep, RiskLevel
+from app.engines.process_automation.actions import ACTION_REGISTRY
 
-from .contracts import ProcessStep, RiskLevel
 
 @dataclass(frozen=True)
 class PolicyDecision:
@@ -9,27 +10,22 @@ class PolicyDecision:
     requires_approval: bool
     reason: str
 
-REGISTERED_ACTIONS = {
-    "system.health_check",
-    "system.echo",
-}
 
 APPROVAL_REQUIRED = {
     RiskLevel.HIGH,
     RiskLevel.CRITICAL,
 }
 
+
 def evaluate_step(step: ProcessStep) -> PolicyDecision:
-    if step.action_key not in REGISTERED_ACTIONS:
+    if step.action_key not in ACTION_REGISTRY:
         return PolicyDecision(
             allowed=False,
             requires_approval=False,
             reason="Action is not registered in the execution registry",
         )
 
-    requires_approval = (
-        step.risk_level in APPROVAL_REQUIRED
-    )
+    requires_approval = step.risk_level in APPROVAL_REQUIRED
 
     return PolicyDecision(
         allowed=True,

@@ -71,6 +71,7 @@ def main() -> None:
     os.environ["DATABASE_URL"] = f"sqlite:///{(data_root / 'enterprise.db').as_posix()}"
     os.environ["REDIS_URL"] = ""
     os.environ["APP_NAME"] = APP_NAME
+    os.environ["AUTO_CREATE_TABLES"] = "true"
 
     if not getattr(sys, "frozen", False):
         sys.path.insert(0, str(bundle_directory / "backend"))

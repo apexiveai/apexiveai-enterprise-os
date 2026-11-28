@@ -46,11 +46,64 @@ services:
     networks:
       - max-network
 
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_TENANT_ID: ${VITE_TENANT_ID:-local-workspace}
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      ENVIRONMENT: ${APP_ENV:-development}
+      DATABASE_URL: postgresql+psycopg://max:${POSTGRES_PASSWORD}@postgres:5432/max_enterprise
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - max-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_TENANT_ID: ${VITE_TENANT_ID:-local-workspace}
+    container_name: apexiveai-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_NAME: ApexiveAI Enterprise OS
+      ENVIRONMENT: ${APP_ENV:-development}
+      AUTO_CREATE_TABLES: "false"
+      DATABASE_URL: postgresql+psycopg://max:${POSTGRES_PASSWORD}@postgres:5432/max_enterprise
+      REDIS_URL: redis://redis:6379/0
+      PORT: "8765"
+      OBJECT_STORAGE_PATH: /app/data/objects
+      APEXIVE_FRONTEND_DIR: /app/frontend/dist
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - object_data:/app/data/objects
+    init: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks:
+      - max-network
+
 volumes:
   postgres_data:
     name: max-postgres-data
   redis_data:
     name: max-redis-data
+  object_data:
+    name: apexiveai-object-data
 
 networks:
   max-network:

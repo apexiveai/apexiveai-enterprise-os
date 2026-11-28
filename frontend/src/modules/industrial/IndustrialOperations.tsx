@@ -1,4 +1,5 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { apiUrl } from '../../lib/api'
 import {
   Activity,
   AlertTriangle,
@@ -7,6 +8,7 @@ import {
   ChevronRight,
   Cpu,
   Database,
+  Download,
   Factory,
   Gauge,
   Plane,
@@ -20,12 +22,13 @@ import {
 
 type IndustrialSection =
   | 'Robotics Fleet Management'
-  | 'Industrial OT Integration'
-  | 'IoT & Edge Gateway'
-  | 'Robotic Process Control'
-  | 'Drone & Inspection Management'
-  | 'Fleet & Logistics Automation'
-  | 'Asset & Predictive Maintenance'
+  | 'Software Integration Estimate'
+  | 'Industrial IoT / Edge Gateway'
+  | 'PLC / SCADA Integration'
+  | 'OPC UA / MQTT / Modbus Integration'
+  | 'AMR / AGV Fleet Integration'
+  | 'Robotic Arm Integration'
+  | 'Drone / Inspection Integration'
   | 'Enterprise Operations Command Center'
 
 type Robot = {
@@ -96,6 +99,25 @@ type IndustrialData = {
   assets: PlantAsset[]
 }
 
+type DeviceStatus = 'online' | 'offline' | 'degraded' | 'maintenance' | 'fault' | 'disabled'
+const deviceStatuses: DeviceStatus[] = ['offline', 'online', 'degraded', 'maintenance', 'fault', 'disabled']
+
+function isDeviceStatus(value: string): value is DeviceStatus {
+  return deviceStatuses.some((status) => status === value)
+}
+
+type IndustrialDevice = {
+  id: string
+  name: string
+  device_type: string
+  manufacturer: string | null
+  model: string | null
+  protocol: string
+  endpoint: string | null
+  status: DeviceStatus
+  created_at: string
+}
+
 const STORAGE_KEY = 'apexive-industrial-operations-v1'
 
 const initialData: IndustrialData = {
@@ -127,20 +149,80 @@ const initialData: IndustrialData = {
 }
 
 const capabilities: Array<{ name: IndustrialSection; description: string }> = [
+  { name: 'Software Integration Estimate', description: 'Estimate sheet for enterprise software integration modules.' },
   { name: 'Robotics Fleet Management', description: 'AMR/AGV routes, task queues, battery and fleet status.' },
-  { name: 'Industrial OT Integration', description: 'Connector setup for PLC, SCADA, OPC UA, Modbus and MQTT.' },
-  { name: 'IoT & Edge Gateway', description: 'Temperature, pressure, vibration, tank level and energy signals.' },
-  { name: 'Robotic Process Control', description: 'Safety-interlocked packaging, palletizing and pick-and-place cells.' },
-  { name: 'Drone & Inspection Management', description: 'Construction surveys, stockpiles and infrastructure inspections.' },
-  { name: 'Fleet & Logistics Automation', description: 'Dispatch, route planning, delivery tracking and verification.' },
-  { name: 'Asset & Predictive Maintenance', description: 'Asset health indicators and maintenance schedules.' },
+  { name: 'Industrial IoT / Edge Gateway', description: 'Edge ingestion, filtering, buffering, OTA and local rules.' },
+  { name: 'PLC / SCADA Integration', description: 'PLC tags, SCADA historian, alarms, recipes and audit trails.' },
+  { name: 'OPC UA / MQTT / Modbus Integration', description: 'Protocol translation, unified namespace and secure connections.' },
+  { name: 'AMR / AGV Fleet Integration', description: 'Maps, missions, VDA 5050, facility infrastructure and analytics.' },
+  { name: 'Robotic Arm Integration', description: 'Arm programs, workcells, vision, telemetry and cobot safety.' },
+  { name: 'Drone / Inspection Integration', description: 'Flight missions, live feeds, AI defects, docks and reports.' },
   { name: 'Enterprise Operations Command Center', description: 'One view of agents, automation, robots, machines and alerts.' },
 ]
+
+const moduleCapabilities: Record<Exclude<IndustrialSection, 'Software Integration Estimate'>, Array<{ title: string; detail: string }>> = {
+  'Robotics Fleet Management': [
+    { title: 'Centralized Fleet Registry & Status Monitoring', detail: 'Monitor online status, battery levels, and active tasks across robot types from one workspace.' },
+    { title: 'Task Dispatching & Scheduling', detail: 'Automatically assign tasks, prioritize queues, and schedule fleet operations.' },
+    { title: 'Traffic & Collision Management', detail: 'Coordinate robot routes, prevent deadlocks, and control zone access.' },
+    { title: 'Charging & Maintenance Management', detail: 'Send robots to charging stations when battery levels are low and schedule preventive maintenance.' },
+    { title: 'Remote Teleoperation & Emergency Override', detail: 'Enable remote control and emergency stop actions when required.' },
+  ],
+  'Industrial IoT / Edge Gateway': [
+    { title: 'Multi-Protocol Data Ingestion', detail: 'Collect machine and sensor data through multiple industrial protocols.' },
+    { title: 'Edge Computing & Local Filtering', detail: 'Clean and aggregate data at the edge, and detect anomalies before data reaches the cloud.' },
+    { title: 'Store-and-Forward Buffering', detail: 'Buffer data locally during network outages and forward it automatically after reconnection.' },
+    { title: 'Device Provisioning & OTA Updates', detail: 'Manage gateway configuration, certificates, and firmware or software updates over the air.' },
+    { title: 'Edge Rule Engine', detail: 'Run local automation rules to control equipment, including during network outages.' },
+  ],
+  'PLC / SCADA Integration': [
+    { title: 'PLC Tag Reading & Writing', detail: 'Read and write PLC memory tags and registers in real time across supported vendors.' },
+    { title: 'SCADA Synchronization & Historian Logging', detail: 'Record plant data in SCADA systems or time-series historians.' },
+    { title: 'Alarm & Event Management', detail: 'Send temperature, equipment, and PLC/SCADA alarms to dashboards and operators.' },
+    { title: 'Recipe & Setpoint Management', detail: 'Send product-specific PLC recipes and setpoints from the software.' },
+    { title: 'Safety Interlock & Audit Trail', detail: 'Enforce role-based access and record PLC command changes in an audit trail.' },
+  ],
+  'OPC UA / MQTT / Modbus Integration': [
+    { title: 'Protocol Connectors & Translators', detail: 'Translate OPC UA, MQTT Sparkplug B, and Modbus TCP/RTU data into standard formats such as JSON.' },
+    { title: 'Broker & Server Management', detail: 'Manage reliable connections to MQTT brokers and OPC UA servers or clients.' },
+    { title: 'Tag Mapping & Data Normalization', detail: 'Standardize tag names and units across equipment with a unified namespace.' },
+    { title: 'Connection Health & Auto-Reconnect', detail: 'Monitor reconnection status, latency, and packet loss.' },
+    { title: 'Transport Security', detail: 'Protect industrial data with TLS/SSL encryption, certificates, and authentication.' },
+  ],
+  'AMR / AGV Fleet Integration': [
+    { title: 'Map & Navigation Management', detail: 'Manage SLAM maps, virtual paths, waypoints, and restricted zones.' },
+    { title: 'Material Transport & Mission Execution', detail: 'Execute material transport missions from ERP, MES, and WMS requests.' },
+    { title: 'VDA 5050 / Standard API Interoperability', detail: 'Control AMR and AGV fleets from multiple vendors through standard interfaces.' },
+    { title: 'Facility Infrastructure Integration', detail: 'Coordinate automatic doors, elevators, conveyors, and other facility systems.' },
+    { title: 'Throughput & Path Analytics', detail: 'Analyze delivery times, route congestion, and fleet utilization.' },
+  ],
+  'Robotic Arm Integration': [
+    { title: 'Program Selection & Cycle Control', detail: 'Select, start, and stop robotic arm programs from vendors such as UR, Fanuc, KUKA, and ABB.' },
+    { title: 'Workcell Synchronization', detail: 'Synchronize arms, conveyors, grippers, and CNC machines.' },
+    { title: 'Vision System & Pick-and-Place', detail: 'Use camera and 3D vision data for precise object picking and placement.' },
+    { title: 'Telemetry & Cycle Time Analytics', detail: 'Measure and record joint angles, torque, temperature, and cycle times.' },
+    { title: 'Collaborative Safety & Zone Monitoring', detail: 'Monitor cobot speed and safety zones, and support error recovery.' },
+  ],
+  'Drone / Inspection Integration': [
+    { title: 'Automated Flight Mission Planning', detail: 'Plan GPS and waypoint routes for scheduled drone missions.' },
+    { title: 'Live Video & Thermal Feed Streaming', detail: 'Stream HD video and thermal camera feeds to the control room.' },
+    { title: 'AI Defect & Anomaly Detection', detail: 'Detect cracks, corrosion, overheating, and safety risks with AI.' },
+    { title: 'Docking Station & Battery Swap Control', detail: 'Manage drone-in-a-box docking, automatic charging, and flight schedules.' },
+    { title: 'Inspection Reporting & Geo-Tagging', detail: 'Export inspection findings with GPS or indoor coordinates to PDF and dashboards.' },
+  ],
+  'Enterprise Operations Command Center': [
+    { title: 'Unified Single-Pane-of-Glass Dashboard', detail: 'View robot, PLC, IoT, AMR, and drone status on a unified map or 3D layout.' },
+    { title: 'Real-Time KPI & OEE Monitoring', detail: 'Monitor OEE, production throughput, and energy consumption KPIs.' },
+    { title: 'Cross-System Alerting & Incident Response', detail: 'Create incident alerts and track each step through resolution.' },
+    { title: 'ERP / MES / WMS Integration', detail: 'Connect data across ERP, MES, inventory, and maintenance systems.' },
+    { title: 'RBAC & Executive Reporting', detail: 'Provide role-based views and reports for managers, engineers, and operators.' },
+  ],
+}
 
 const architecture = [
   { title: 'AI Agent Studio', subtitle: 'Plans tasks from user intent and executes approved actions.', target: 'AI Bot Studio', tone: 'aqua' },
   { title: 'Workflow + RPA + Policy Engine', subtitle: 'Coordinates workflows, approvals, policies, and automation.', target: 'Workflow Studio', tone: 'blue' },
-  { title: 'Integration Hub + Edge Gateway', subtitle: 'Connects ERP, APIs, PLCs, IoT devices, and robot interfaces.', target: 'Industrial OT Integration', tone: 'sand' },
+  { title: 'Integration Hub + Edge Gateway', subtitle: 'Connects ERP, APIs, PLCs, IoT devices, and robot interfaces.', target: 'PLC / SCADA Integration', tone: 'sand' },
   { title: 'Physical Robots & Industrial Machines', subtitle: 'Integrates robots and machines behind safety interlocks.', target: 'Robotics Fleet Management', tone: 'mint' },
 ]
 
@@ -194,6 +276,146 @@ function SelectField({ label, name, options }: {
   )
 }
 
+async function apiError(response: Response) {
+  try {
+    const body = await response.json() as { detail?: unknown }
+    if (typeof body.detail === 'string') return body.detail
+    return response.statusText || `Request failed (${response.status}).`
+  } catch {
+    return response.statusText || `Request failed (${response.status}).`
+  }
+}
+
+function IndustrialDeviceRegistry() {
+  const tenantId = import.meta.env.VITE_TENANT_ID || 'local-workspace'
+  const [devices, setDevices] = useState<IndustrialDevice[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    const query = new URLSearchParams({ tenant_id: tenantId })
+    fetch(apiUrl(`/api/v1/industrial/devices?${query}`))
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await apiError(response))
+        return await response.json() as IndustrialDevice[]
+      })
+      .then((items) => {
+        if (active) setDevices(items)
+      })
+      .catch((loadError: unknown) => {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'Could not load device records.')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [tenantId])
+
+  const refresh = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const query = new URLSearchParams({ tenant_id: tenantId })
+      const response = await fetch(apiUrl(`/api/v1/industrial/devices?${query}`))
+      if (!response.ok) throw new Error(await apiError(response))
+      setDevices(await response.json() as IndustrialDevice[])
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Could not load device records.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createDevice = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    const form = event.currentTarget
+    const values = new FormData(form)
+    try {
+      const response = await fetch(apiUrl('/api/v1/industrial/devices'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: tenantId,
+          name: String(values.get('device-name') || '').trim(),
+          device_type: String(values.get('device-type') || ''),
+          protocol: String(values.get('device-protocol') || ''),
+          endpoint: String(values.get('device-endpoint') || '').trim() || null,
+        }),
+      })
+      if (!response.ok) throw new Error(await apiError(response))
+      const created = await response.json() as IndustrialDevice
+      setDevices((current) => [created, ...current])
+      form.reset()
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : 'Could not register this device.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const updateDeviceStatus = async (device: IndustrialDevice, status: DeviceStatus) => {
+    setError('')
+    try {
+      const query = new URLSearchParams({ tenant_id: tenantId })
+      const response = await fetch(apiUrl(`/api/v1/industrial/devices/${encodeURIComponent(device.id)}/status?${query}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      if (!response.ok) throw new Error(await apiError(response))
+      const updated = await response.json() as IndustrialDevice
+      setDevices((current) => current.map((item) => item.id === updated.id ? updated : item))
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Could not update device status.')
+    }
+  }
+
+  return (
+    <section className="industrial-panel">
+      <PanelHeading
+        title="Persisted industrial device registry"
+        detail={`Tenant ${tenantId} · records are saved by the backend; registering a device does not connect to it`}
+        action={<button className="industrial-secondary" type="button" onClick={() => void refresh()} disabled={loading}><Activity size={13} /> Refresh</button>}
+      />
+      {error && <div className="industrial-error" role="alert">{error}</div>}
+      <form className="industrial-form" onSubmit={(event) => void createDevice(event)}>
+        <InputField label="Device name" name="device-name" placeholder="Line 01 controller" />
+        <SelectField label="Device type" name="device-type" options={['PLC', 'SCADA', 'Sensor', 'Gateway', 'Robot', 'Other']} />
+        <SelectField label="Protocol" name="device-protocol" options={['OPC UA', 'MQTT', 'Modbus TCP', 'Modbus RTU', 'Other']} />
+        <InputField label="Endpoint (optional)" name="device-endpoint" placeholder="opc.tcp://gateway.local:4840" />
+        <button className="industrial-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : <><Plus size={14} /> Register device</>}</button>
+      </form>
+      <div className="industrial-table">
+        <div className="industrial-row industrial-table-head"><span>Device</span><span>Protocol / endpoint</span><span>Type</span><span>Status</span><span>Registered</span></div>
+        {devices.map((device) => (
+          <div className="industrial-row" key={device.id}>
+            <strong>{device.name}<small>{device.id}{device.manufacturer ? ` · ${device.manufacturer}` : ''}</small></strong>
+            <span>{device.protocol}<small>{device.endpoint || 'No endpoint configured'}</small></span>
+            <span>{device.device_type}<small>{device.model || 'Model not specified'}</small></span>
+            <label className="industrial-field">
+              <span>Status</span>
+              <select aria-label={`Status for ${device.name}`} value={device.status} onChange={(event) => {
+                const nextStatus = event.target.value
+                if (isDeviceStatus(nextStatus)) void updateDeviceStatus(device, nextStatus)
+              }}>
+                {deviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
+            </label>
+            <span>{new Date(device.created_at).toLocaleDateString()}</span>
+          </div>
+        ))}
+        {!loading && devices.length === 0 && <div className="industrial-empty"><Database size={15} />No saved devices for this tenant yet.</div>}
+        {loading && <div className="industrial-empty">Loading saved devices…</div>}
+      </div>
+      <p className="industrial-registry-note"><ShieldCheck size={13} /> Status is an operator-entered registry value. No telemetry or physical control is enabled.</p>
+    </section>
+  )
+}
+
 function PanelHeading({ title, detail, action }: {
   title: string
   detail?: string
@@ -203,6 +425,119 @@ function PanelHeading({ title, detail, action }: {
     <div className="industrial-panel-heading">
       <div><h2>{title}</h2>{detail && <p>{detail}</p>}</div>
       {action}
+    </div>
+  )
+}
+
+function ModuleCapabilityCards({ section }: { section: IndustrialSection }) {
+  if (section === 'Software Integration Estimate') return null
+  const cards = moduleCapabilities[section]
+
+  return (
+    <section className="module-capability-section">
+      <PanelHeading title="Core capabilities" detail="Planned product requirements for this module" />
+      <div className="module-capability-grid">
+        {cards.map((card, index) => (
+          <article key={card.title}>
+            <span className="module-capability-number">{String(index + 1).padStart(2, '0')}</span>
+            <div><strong>{card.title}</strong><p>{card.detail}</p></div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function translateLegacyEstimate(value: string) {
+  const normalized = value.replace(/[\u1040-\u1049]/g, (digit) => String(digit.charCodeAt(0) - 0x1040))
+  const match = /^(\d+)-(\d+) \u101E\u102D\u1014\u103A\u1038$/.exec(normalized)
+  return match
+    ? `MMK ${Number(match[1]) / 10}-${Number(match[2]) / 10} million`
+    : value
+}
+
+function SoftwareIntegrationEstimate() {
+  const defaultRows = [
+    { no: 1, module: 'Robotics Fleet Management', estimate: 'MMK 10-20 million' },
+    { no: 2, module: 'Industrial IoT / Edge Gateway', estimate: 'MMK 20-30 million' },
+    { no: 3, module: 'PLC / SCADA Integration', estimate: 'MMK 10-20 million' },
+    { no: 4, module: 'OPC UA / MQTT / Modbus Integration', estimate: 'MMK 25-50 million' },
+    { no: 5, module: 'AMR / AGV Fleet Integration', estimate: 'MMK 10-20 million' },
+    { no: 6, module: 'Robotic Arm Integration', estimate: 'MMK 10-20 million' },
+    { no: 7, module: 'Drone / Inspection Integration', estimate: 'MMK 20-30 million' },
+    { no: 8, module: 'Enterprise Operations Command Center', estimate: 'MMK 20-30 million' },
+  ]
+  const [rows, setRows] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('apexive-integration-estimates') || 'null')
+      return Array.isArray(saved)
+        ? saved.map((row) => ({
+          ...row,
+          estimate: typeof row.estimate === 'string' ? translateLegacyEstimate(row.estimate) : row.estimate,
+        }))
+        : defaultRows
+    } catch {
+      return defaultRows
+    }
+  })
+  const [editing, setEditing] = useState(false)
+
+  const updateEstimate = (no: number, estimate: string) => {
+    setRows((current) => current.map((row) => row.no === no ? { ...row, estimate } : row))
+  }
+
+  const save = () => {
+    localStorage.setItem('apexive-integration-estimates', JSON.stringify(rows))
+    setEditing(false)
+  }
+
+  const reset = () => {
+    setRows(defaultRows)
+    localStorage.removeItem('apexive-integration-estimates')
+  }
+
+  const exportCsv = () => {
+    const csv = ['No,Module,Software Integration Estimate', ...rows.map((row) => `${row.no},"${row.module.replaceAll('"', '""')}","${row.estimate}"`)].join('\n')
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    link.download = 'software-integration-estimate.csv'
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
+
+  return (
+    <div className="estimate-page">
+      <div className="estimate-actions">
+        <button className="industrial-secondary" onClick={() => setEditing((value) => !value)}>
+          {editing ? 'Cancel Editing' : 'Edit Estimates'}
+        </button>
+        {editing && <button className="industrial-primary" onClick={save}>Save Changes</button>}
+        <button className="industrial-secondary" onClick={reset}>Reset</button>
+        <button className="industrial-secondary" onClick={exportCsv}><Download size={13} /> Export CSV</button>
+      </div>
+      <section className="estimate-card" aria-label="Software Integration Estimate">
+        <div className="estimate-header">
+          <span>No.</span>
+          <span>Module</span>
+          <span>Software<br />Integration<br />Estimate</span>
+        </div>
+        {rows.map((row) => (
+          <div className="estimate-row" key={row.no}>
+            <span className="estimate-number">{row.no}</span>
+            <strong className="estimate-module">{row.module}</strong>
+            {editing ? (
+              <input
+                className="estimate-input"
+                value={row.estimate}
+                onChange={(event) => updateEstimate(row.no, event.target.value)}
+                aria-label={`Estimate for ${row.module}`}
+              />
+            ) : (
+              <span className="estimate-value">{row.estimate}</span>
+            )}
+          </div>
+        ))}
+      </section>
     </div>
   )
 }
@@ -255,20 +590,24 @@ export default function IndustrialOperations({ section, onNavigate }: {
       </div>
       {storageError && <div className="industrial-error" role="alert">{storageError}</div>}
       {notice && <div className="industrial-notice" role="status"><CheckCircle2 size={15} />{notice}</div>}
+      {['Robotics Fleet Management', 'Industrial IoT / Edge Gateway', 'PLC / SCADA Integration', 'OPC UA / MQTT / Modbus Integration'].includes(section) && <IndustrialDeviceRegistry />}
+      <ModuleCapabilityCards section={section} />
 
       {section === 'Enterprise Operations Command Center' ? (
         <CommandCenter data={data} alertCount={alertCount} onNavigate={onNavigate} />
+      ) : section === 'Software Integration Estimate' ? (
+        <SoftwareIntegrationEstimate />
       ) : section === 'Robotics Fleet Management' ? (
         <RobotFleet data={data} commit={commit} announce={announce} />
-      ) : section === 'Industrial OT Integration' ? (
+      ) : section === 'PLC / SCADA Integration' || section === 'OPC UA / MQTT / Modbus Integration' ? (
         <OtIntegration data={data} commit={commit} announce={announce} submitRecord={submitRecord} />
-      ) : section === 'IoT & Edge Gateway' ? (
+      ) : section === 'Industrial IoT / Edge Gateway' ? (
         <SensorMonitor data={data} commit={commit} announce={announce} />
-      ) : section === 'Robotic Process Control' ? (
+      ) : section === 'Robotic Arm Integration' ? (
         <RoboticProcessControl data={data} commit={commit} announce={announce} />
-      ) : section === 'Drone & Inspection Management' ? (
+      ) : section === 'Drone / Inspection Integration' ? (
         <DroneInspections data={data} commit={commit} announce={announce} submitRecord={submitRecord} />
-      ) : section === 'Fleet & Logistics Automation' ? (
+      ) : section === 'AMR / AGV Fleet Integration' ? (
         <Logistics data={data} commit={commit} announce={announce} submitRecord={submitRecord} />
       ) : (
         <Maintenance data={data} commit={commit} announce={announce} submitRecord={submitRecord} />

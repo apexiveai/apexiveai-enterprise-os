@@ -1,17 +1,16 @@
-﻿
-from sqlalchemy import create_engine, text
+﻿from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
+from app.db.base import Base
 
 
 database_url = make_url(settings.database_url)
 is_sqlite = database_url.get_backend_name() == "sqlite"
 
-engine_options = {
-    "pool_pre_ping": True,
-}
+engine_options = {"pool_pre_ping": True}
 
 if is_sqlite:
     engine_options["connect_args"] = {
@@ -19,15 +18,23 @@ if is_sqlite:
         "timeout": 30,
     }
 else:
-    engine_options.update(
-        pool_size=5,
-        max_overflow=10,
-    )
+    engine_options.update(pool_size=5, max_overflow=10)
 
-engine = create_engine(
-    settings.database_url,
-    **engine_options,
+engine = create_engine(settings.database_url, **engine_options)
+
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    expire_on_commit=False,
 )
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 redis_client = None
@@ -36,7 +43,6 @@ redis_available = False
 if settings.redis_url:
     try:
         from redis import Redis
-        from redis.exceptions import RedisError
 
         redis_client = Redis.from_url(
             settings.redis_url,
@@ -45,7 +51,6 @@ if settings.redis_url:
             socket_timeout=3,
         )
         redis_available = True
-
     except ImportError:
         redis_client = None
 
@@ -62,7 +67,6 @@ def check_database() -> bool:
 def check_redis() -> bool | None:
     if redis_client is None:
         return None
-
     try:
         return bool(redis_client.ping())
     except Exception:
@@ -71,6 +75,5 @@ def check_redis() -> bool | None:
 
 def close_connections() -> None:
     engine.dispose()
-
     if redis_client is not None:
         redis_client.close()

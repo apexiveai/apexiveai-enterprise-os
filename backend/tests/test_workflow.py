@@ -29,12 +29,20 @@ def test_workflow_deployment_and_execution():
     workflow = service.create(
         "Purchase Approval",
         "Approve purchases",
-        [{"id": "start", "type": "Start", "name": "Request"}],
+        [
+            {"id": "start", "type": "Start", "name": "Request"},
+            {"id": "approval", "type": "User", "name": "Finance Manager Approval"},
+        ],
     )
     deployed = service.deploy(workflow["workflow_id"])
     execution = service.start(workflow["workflow_id"], {"amount": 500})
+    tasks = service.list_human_tasks()
     assert deployed["status"] == "deployed"
     assert execution["status"] == "running"
+    assert len(tasks) == 1
+    assert tasks[0]["execution_id"] == execution["execution_id"]
+    assert tasks[0]["name"] == "Finance Manager Approval"
+    assert tasks[0]["status"] == "pending"
 
 
 def test_human_task_completion():

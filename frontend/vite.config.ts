@@ -4,13 +4,15 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  envDir: '..',
   plugins: [react(), tailwindcss()],
   server: {
-    host: '0.0.0.0',
+    host: '127.0.0.1',
     port: 5173,
     strictPort: true,
     proxy: {
-      '/api': 'http://127.0.0.1:8000',
+      '/api': 'http://127.0.0.1:8765',
+      '/health': 'http://127.0.0.1:8765',
     },
   },
   build: {

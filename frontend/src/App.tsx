@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  Activity, Bell, Boxes, BriefcaseBusiness, ChevronDown,
+  Activity, Bell, Bot, Boxes, BriefcaseBusiness,
   CircleGauge, ClipboardCheck, Cloud, Cpu, Database, Factory,
   FileText, Fuel, Gauge, Hammer, HeartPulse,
   Hotel, Landmark, LayoutDashboard, Leaf, Menu,
@@ -11,64 +11,109 @@ import {
   GitBranch, Radio,
 } from 'lucide-react'
 import IndustrialOperations from './modules/industrial/IndustrialOperations'
+import IndustrialAIDigitalTwin from './modules/industrial/IndustrialAIDigitalTwin'
+import AdvancedAIOrchestrator from './modules/intelligence/AdvancedAIOrchestrator'
+import SpecializedAIAgents from './modules/intelligence/SpecializedAIAgents'
+import IntelligentWorkflowApproval from './modules/workflow/IntelligentWorkflowApproval'
+import BusinessInsights from './modules/intelligence/BusinessInsights'
+import IndustrySolutionsWorkspace from './modules/industry/IndustrySolutionsWorkspace'
+import { industrySolutions } from './modules/industry/industrySolutions'
+import { apiUrl } from './lib/api'
 
 type IconType = typeof LayoutDashboard
 
-const navSections: Array<{ title: string; items: Array<{ label: string; icon: IconType }> }> = [
-  { title: '', items: [{ label: 'Dashboard', icon: LayoutDashboard }, { label: 'Executive Center', icon: Gauge }] },
-  { title: 'OPERATIONS', items: [
-    { label: 'Group Management', icon: Users },
-    { label: 'Finance', icon: Landmark },
-    { label: 'Human Resources', icon: UserRound },
-    { label: 'Procurement', icon: ShoppingCart },
-    { label: 'Operations', icon: Activity },
-    { label: 'Projects', icon: BriefcaseBusiness },
-  ] },
-  { title: 'BUSINESS UNITS', items: [
-    { label: 'Energy', icon: Fuel },
-    { label: 'Construction', icon: Hammer },
-    { label: 'Manufacturing', icon: Factory },
-    { label: 'Hospitality', icon: Hotel },
-    { label: 'Logistics', icon: Truck },
-    { label: 'Agriculture', icon: Leaf },
-    { label: 'Trading', icon: Boxes },
-    { label: 'Highway & Infrastructure', icon: Plane },
-  ] },
-  { title: 'INTELLIGENCE', items: [
-    { label: 'AI Intelligence', icon: Sparkles },
-    { label: 'Workflow Studio', icon: GitBranch },
-    { label: 'RPA Automation', icon: Workflow },
-    { label: 'RPA Orchestrator', icon: Radio },
-    { label: 'Security', icon: ShieldCheck },
-    { label: 'Reports & Analytics', icon: CircleGauge },
-  ] },
-  { title: 'INDUSTRIAL OPERATIONS', items: [
-    { label: 'Robotics Fleet Management', icon: Truck },
-    { label: 'Industrial OT Integration', icon: Radio },
-    { label: 'IoT & Edge Gateway', icon: Database },
-    { label: 'Robotic Process Control', icon: Cpu },
-    { label: 'Drone & Inspection Management', icon: Plane },
-    { label: 'Fleet & Logistics Automation', icon: Workflow },
-    { label: 'Asset & Predictive Maintenance', icon: Activity },
-    { label: 'Enterprise Operations Command Center', icon: Gauge },
-  ] },
-  { title: 'ENTERPRISE SUITES', items: [
-    { label: 'AI Bot Studio', icon: Sparkles },
-    { label: 'Agentic Process Automation', icon: Workflow },
-    { label: 'Process & Task Mining', icon: CircleGauge },
-    { label: 'Intelligent Documents', icon: FileText },
-    { label: 'Integration Studio', icon: Cloud },
-    { label: 'Decision & Rules', icon: GitBranch },
-    { label: 'Workforce & Collaboration', icon: Users },
-    { label: 'Automation Quality', icon: ClipboardCheck },
-    { label: 'Automation Center', icon: Radio },
-    { label: 'Low-Code Builder', icon: Boxes },
-    { label: 'Enterprise Data', icon: Database },
-    { label: 'Digital Twin', icon: Activity },
-    { label: 'Security & Governance', icon: ShieldCheck },
-    { label: 'Enterprise Marketplace', icon: Package },
-    { label: 'Advanced Automation', icon: Cpu },
-  ] },
+type NavItem = { label: string; icon: IconType }
+type NavGroup = { title: string; items: NavItem[] }
+type NavSection = { title: string; groups: NavGroup[] }
+
+const navSections: NavSection[] = [
+  {
+    title: 'Command & Overview',
+    groups: [{ title: 'Overview', items: [
+      { label: 'Dashboard', icon: LayoutDashboard },
+      { label: 'Executive Center', icon: Gauge },
+      { label: 'Enterprise Operations Command Center', icon: Gauge },
+    ] }],
+  },
+  {
+    title: 'Automation & AI Studio',
+    groups: [
+      { title: 'AI & Agent Studio', items: [
+        { label: 'AI Intelligence', icon: Sparkles },
+        { label: 'AI Bot Studio', icon: Sparkles },
+        { label: 'Advanced AI Orchestrator', icon: Workflow },
+        { label: 'Specialized AI Agents', icon: Bot },
+        { label: 'Agentic Process Automation', icon: Workflow },
+        { label: 'Intelligent Documents', icon: FileText },
+        { label: 'Advanced Automation', icon: Cpu },
+      ] },
+      { title: 'Workflows & RPA', items: [
+        { label: 'Intelligent Workflow & Approval', icon: ClipboardCheck },
+        { label: 'Workflow Studio', icon: GitBranch },
+        { label: 'RPA Automation', icon: Workflow },
+        { label: 'RPA Orchestrator', icon: Radio },
+        { label: 'Process & Task Mining', icon: CircleGauge },
+        { label: 'Integration Studio', icon: Cloud },
+        { label: 'Decision & Rules', icon: GitBranch },
+        { label: 'Low-Code Builder', icon: Boxes },
+        { label: 'Workforce & Collaboration', icon: Users },
+      ] },
+    ],
+  },
+  {
+    title: 'Operations & Assets',
+    groups: [
+      { title: 'Assets & Digital Twin', items: [
+        { label: 'Asset Management', icon: Boxes },
+        { label: 'Digital Twin', icon: Activity },
+        { label: 'Enterprise Data', icon: Database },
+      ] },
+      { title: 'Industrial & Field Ops', items: [
+        { label: 'Industrial AI & Digital Twin', icon: Factory },
+        { label: 'Software Integration Estimate', icon: ClipboardCheck },
+        { label: 'Robotics Fleet Management', icon: Truck },
+        { label: 'Industrial IoT / Edge Gateway', icon: Database },
+        { label: 'PLC / SCADA Integration', icon: Radio },
+        { label: 'OPC UA / MQTT / Modbus Integration', icon: Cloud },
+        { label: 'AMR / AGV Fleet Integration', icon: Truck },
+        { label: 'Robotic Arm Integration', icon: Cpu },
+        { label: 'Drone / Inspection Integration', icon: Plane },
+      ] },
+      { title: 'Industry Solutions', items: [
+        { label: 'Construction AI Project Management Agent', icon: Hammer },
+        { label: 'Manufacturing Factory Automation RPA', icon: Factory },
+        { label: 'Energy AI Operations & Reporting', icon: Fuel },
+        { label: 'Trading AI Sales Agent', icon: Boxes },
+        { label: 'Hotels AI Reservation Chatbot', icon: Hotel },
+        { label: 'Agro AI Agriculture Operations', icon: Leaf },
+        { label: 'Highway Toll Collection Automation', icon: Plane },
+        { label: 'Logistics AI Logistics Agent', icon: Truck },
+      ] },
+      { title: 'Core Business Units', items: [
+        { label: 'Group Management', icon: Users },
+        { label: 'Finance', icon: Landmark },
+        { label: 'Human Resources', icon: UserRound },
+        { label: 'Procurement', icon: ShoppingCart },
+        { label: 'Operations', icon: Activity },
+        { label: 'Projects', icon: BriefcaseBusiness },
+      ] },
+    ],
+  },
+  {
+    title: 'Governance & System',
+    groups: [
+      { title: 'Analytics & Quality', items: [
+        { label: 'Reports & Analytics', icon: CircleGauge },
+        { label: 'Automation Center', icon: Radio },
+        { label: 'Automation Quality', icon: ClipboardCheck },
+      ] },
+      { title: 'Security & Marketplace', items: [
+        { label: 'Security', icon: ShieldCheck },
+        { label: 'Security & Governance', icon: ShieldCheck },
+        { label: 'Enterprise Marketplace', icon: Package },
+      ] },
+    ],
+  },
 ]
 
 const moduleCards: Array<{ label: string; icon: IconType }> = [
@@ -83,11 +128,6 @@ const moduleCards: Array<{ label: string; icon: IconType }> = [
   { label: 'CRM System', icon: HeartPulse },
   { label: 'Document Management', icon: FileText },
   { label: 'Security Center', icon: ShieldCheck },
-]
-
-const chartPoints = [
-  '0,78 55,66 110,71 165,47 220,58 275,38 330,44 385,24 440,30',
-  '0,92 55,86 110,76 165,80 220,68 275,65 330,54 385,48 440,40',
 ]
 
 const enterpriseSuiteNames = [
@@ -151,13 +191,14 @@ const studioCatalogGroups: Array<{
 ]
 
 const industrialModuleNames = [
+  'Software Integration Estimate',
   'Robotics Fleet Management',
-  'Industrial OT Integration',
-  'IoT & Edge Gateway',
-  'Robotic Process Control',
-  'Drone & Inspection Management',
-  'Fleet & Logistics Automation',
-  'Asset & Predictive Maintenance',
+  'Industrial IoT / Edge Gateway',
+  'PLC / SCADA Integration',
+  'OPC UA / MQTT / Modbus Integration',
+  'AMR / AGV Fleet Integration',
+  'Robotic Arm Integration',
+  'Drone / Inspection Integration',
   'Enterprise Operations Command Center',
 ] as const
 
@@ -171,16 +212,14 @@ function formatTime(date: Date) {
 
 function App() {
   const [dark, setDark] = useState(true)
-  const [active, setActive] = useState('AI Bot Studio')
+  const [active, setActive] = useState('Dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [expandedNavSection, setExpandedNavSection] = useState('Command & Overview')
+  const [expandedNavGroup, setExpandedNavGroup] = useState('Overview')
   const [search, setSearch] = useState('')
-  const [assistantOpen, setAssistantOpen] = useState(true)
-  const [assistantText, setAssistantText] = useState('')
-  const [assistantMessages, setAssistantMessages] = useState([
-    'Good morning. How can I help you today?',
-  ])
   const [now, setNow] = useState(new Date())
   const [notificationOpen, setNotificationOpen] = useState(false)
+  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking')
   const [records, setRecords] = useState<Record<string, Array<Record<string, string>>>>(() => {
     try { return JSON.parse(localStorage.getItem('apexive-module-records') || '{}') } catch { return {} }
   })
@@ -191,37 +230,53 @@ function App() {
   }, [])
 
   useEffect(() => {
+    let active = true
+    const checkApi = async () => {
+      try {
+        const response = await fetch(apiUrl('/health'))
+        if (active) setApiStatus(response.ok ? 'online' : 'offline')
+      } catch {
+        if (active) setApiStatus('offline')
+      }
+    }
+    void checkApi()
+    const timer = window.setInterval(() => void checkApi(), 30000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [])
+
+  useEffect(() => {
     localStorage.setItem('apexive-module-records', JSON.stringify(records))
   }, [records])
 
   const searchResults = useMemo(() => {
     const query = search.trim().toLowerCase()
     if (!query) return []
-    return [...navSections.flatMap((section) => section.items), ...moduleCards]
+    return [...new Map([...navSections.flatMap((section) => section.groups.flatMap((group) => group.items)), ...moduleCards]
+      .map((item) => [item.label, item])).values()]
       .filter((item) => item.label.toLowerCase().includes(query))
       .slice(0, 6)
   }, [search])
 
   const navigate = (label: string) => {
     setActive(label)
+    const activeSection = navSections.find((section) =>
+      section.groups.some((group) => group.items.some((item) => item.label === label))
+    )
+    if (activeSection) {
+      setExpandedNavSection(activeSection.title)
+      const activeGroup = activeSection.groups.find((group) => group.items.some((item) => item.label === label))
+      if (activeGroup) setExpandedNavGroup(activeGroup.title)
+    }
     setSidebarOpen(false)
-  }
-
-  const sendAssistantMessage = () => {
-    const prompt = assistantText.trim()
-    if (!prompt) return
-    setAssistantMessages((messages) => [
-      ...messages,
-      prompt,
-      `I’ve analyzed “${prompt}” and prepared the next recommended enterprise action.`,
-    ])
-    setAssistantText('')
   }
 
   const addRecord = () => {
     const next = {
       name: `New ${active} record`,
-      owner: 'Aung Min Htet',
+      owner: 'Unassigned',
       status: 'Active',
       updated: now.toLocaleDateString(),
     }
@@ -246,6 +301,7 @@ function App() {
 
   const isDashboard = active === 'Dashboard'
   const moduleName = active === 'Human Resources' ? 'HR Management' : active
+  const activeIndustrySolution = industrySolutions.find((solution) => solution.label === active)
 
   return (
     <div className={dark ? 'enterprise-app dark' : 'enterprise-app light'}>
@@ -260,19 +316,44 @@ function App() {
           <button className="sidebar-close" onClick={() => setSidebarOpen(false)}><X /></button>
         </div>
         <nav className="enterprise-navigation">
-          {navSections.map((section, sectionIndex) => (
-            <div className="enterprise-nav-section" key={section.title || sectionIndex}>
-              {section.title && <span className="enterprise-nav-heading">{section.title}</span>}
-              {section.items.map(({ label, icon: Icon }) => (
-                <button
-                  key={label}
-                  className={`enterprise-nav-item ${active === label ? 'active' : ''}`}
-                  onClick={() => navigate(label)}
-                >
-                  <Icon size={16} />
-                  <span>{label}</span>
-                </button>
-              ))}
+          {navSections.map((section) => (
+            <div className="enterprise-nav-section" key={section.title}>
+              <button
+                className={`enterprise-nav-heading ${expandedNavSection === section.title ? 'expanded' : ''}`}
+                aria-expanded={expandedNavSection === section.title}
+                onClick={() => setExpandedNavSection((current) => current === section.title ? '' : section.title)}
+              >
+                <span>{section.title}</span>
+                <ChevronRight size={13} />
+              </button>
+              {expandedNavSection === section.title && (
+                <div className="enterprise-nav-groups">
+                  {section.groups.map((group) => (
+                    <div className="enterprise-nav-group" key={group.title}>
+                      {section.groups.length > 1 && (
+                        <button
+                          className="enterprise-nav-subheading"
+                          aria-expanded={expandedNavGroup === group.title}
+                          onClick={() => setExpandedNavGroup((current) => current === group.title ? '' : group.title)}
+                        >
+                          <span>{group.title}</span>
+                          <ChevronRight size={12} />
+                        </button>
+                      )}
+                      {(section.groups.length === 1 || expandedNavGroup === group.title) && group.items.map(({ label, icon: Icon }) => (
+                        <button
+                          key={label}
+                          className={`enterprise-nav-item ${active === label ? 'active' : ''}`}
+                          onClick={() => navigate(label)}
+                        >
+                          <Icon size={16} />
+                          <span>{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </nav>
@@ -307,27 +388,25 @@ function App() {
               </div>
             )}
           </div>
-          <div className="header-status"><span /> System Online</div>
+          <div className={`header-status ${apiStatus}`}><span /> API {apiStatus}</div>
           <button className="theme-button" onClick={() => setDark(!dark)} title="Toggle theme">
             {dark ? <Sun size={17} /> : <Moon size={17} />}
           </button>
           <div className="header-notifications">
             <button className="notification-button" onClick={() => setNotificationOpen(!notificationOpen)}>
-              <Bell size={18} /><span>2</span>
+              <Bell size={18} />
             </button>
             {notificationOpen && (
               <div className="notification-menu">
                 <strong>Notifications</strong>
-                <button onClick={() => navigate('Projects')}>Project approval requested</button>
-                <button onClick={() => navigate('Security')}>Security scan completed</button>
+                <p>No notifications recorded.</p>
               </div>
             )}
           </div>
-          <button className="profile-button" onClick={() => navigate('Executive Center')}>
-            <div className="profile-avatar">AM</div>
-            <div><strong>Aung Min Htet</strong><span>Group CTO</span></div>
-            <ChevronDown size={14} />
-          </button>
+          <div className="profile-button">
+            <div className="profile-avatar">L</div>
+            <div><strong>Local Workspace</strong><span>Authentication unavailable</span></div>
+          </div>
         </header>
 
         <div className="enterprise-content">
@@ -335,20 +414,25 @@ function App() {
             <DashboardView
               now={now}
               navigate={navigate}
-              assistantOpen={assistantOpen}
-              setAssistantOpen={setAssistantOpen}
-              assistantText={assistantText}
-              setAssistantText={setAssistantText}
-              assistantMessages={assistantMessages}
-              setAssistantMessages={setAssistantMessages}
-              sendAssistantMessage={sendAssistantMessage}
             />
           ) : active === 'RPA Automation' || active === 'RPA Studio' ? (
             <RPAStudio />
           ) : active === 'RPA Orchestrator' ? (
             <RPAOrchestrator />
+          ) : active === 'Industrial AI & Digital Twin' ? (
+            <IndustrialAIDigitalTwin onNavigate={navigate} />
+          ) : active === 'Intelligent Workflow & Approval' ? (
+            <IntelligentWorkflowApproval onNavigate={navigate} />
           ) : active === 'Workflow Studio' ? (
             <WorkflowAutomationStudio />
+          ) : active === 'Advanced AI Orchestrator' ? (
+            <AdvancedAIOrchestrator onNavigate={navigate} />
+          ) : active === 'Specialized AI Agents' ? (
+            <SpecializedAIAgents />
+          ) : active === 'Reports & Analytics' ? (
+            <BusinessInsights />
+          ) : activeIndustrySolution ? (
+            <IndustrySolutionsWorkspace key={activeIndustrySolution.key} solution={activeIndustrySolution} />
           ) : isIndustrialModule(active) ? (
             <IndustrialOperations section={active} onNavigate={navigate} />
           ) : enterpriseSuiteNames.includes(active) ? (
@@ -374,134 +458,129 @@ function App() {
   )
 }
 
-function DashboardView({
-  now, navigate, assistantOpen, setAssistantOpen, assistantText, setAssistantText,
-  assistantMessages, setAssistantMessages, sendAssistantMessage,
-}: {
+type DashboardSummary = {
+  tenant_id: string
+  counts: {
+    agents: number
+    active_agents: number
+    agent_runs: number
+    processes: number
+    process_runs: number
+    pending_approvals: number
+    knowledge_documents: number
+    pending_events: number
+    stored_objects: number
+  }
+}
+
+function DashboardView({ now, navigate }: {
   now: Date
   navigate: (label: string) => void
-  assistantOpen: boolean
-  setAssistantOpen: (open: boolean) => void
-  assistantText: string
-  setAssistantText: (text: string) => void
-  assistantMessages: string[]
-  setAssistantMessages: (updater: (messages: string[]) => string[]) => void
-  sendAssistantMessage: () => void
 }) {
-  const kpis = [
-    { label: 'Total Group Revenue', value: 'MMK 842.5B', change: '+12.5%', icon: Landmark },
-    { label: 'Total Assets', value: 'MMK 3.2T', change: '+8.7%', icon: Boxes },
-    { label: 'Active Projects', value: '127', change: '+6.3%', icon: BriefcaseBusiness },
-    { label: 'Total Employees', value: '12,850', change: '+4.1%', icon: Users },
-    { label: 'Operational Efficiency', value: '94.2%', change: '+2.1%', icon: Gauge },
-  ]
+  const tenantId = import.meta.env.VITE_TENANT_ID || 'local-workspace'
+  const [summary, setSummary] = useState<DashboardSummary | null>(null)
+  const [loadError, setLoadError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    fetch(apiUrl(`/api/v1/platform/dashboard?tenant_id=${encodeURIComponent(tenantId)}`))
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Dashboard data could not be loaded (HTTP ${response.status}).`)
+        }
+        return response.json() as Promise<DashboardSummary>
+      })
+      .then((data) => {
+        if (active) {
+          setSummary(data)
+          setLoadError('')
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) setLoadError(error instanceof Error ? error.message : 'Dashboard data could not be loaded.')
+      })
+    return () => { active = false }
+  }, [tenantId])
+
+  const kpis = summary ? [
+    { label: 'Active AI Agents', value: summary.counts.active_agents, icon: Bot, navigateTo: 'Specialized AI Agents' },
+    { label: 'Agent Runs', value: summary.counts.agent_runs, icon: Sparkles, navigateTo: 'Specialized AI Agents' },
+    { label: 'Process Definitions', value: summary.counts.processes, icon: Workflow, navigateTo: 'Workflow Studio' },
+    { label: 'Process Runs', value: summary.counts.process_runs, icon: Activity, navigateTo: 'RPA Orchestrator' },
+    { label: 'Pending Approvals', value: summary.counts.pending_approvals, icon: ClipboardCheck, navigateTo: 'Intelligent Workflow & Approval' },
+    { label: 'Knowledge Documents', value: summary.counts.knowledge_documents, icon: FileText, navigateTo: 'Enterprise Data' },
+  ] : []
 
   return (
-    <div className="dashboard-view">
+    <div className={`dashboard-view ${!summary || loadError ? 'dashboard-view-loading' : ''}`}>
       <section className="executive-hero">
         <div>
-          <h1>Welcome back, Aung Min Htet!</h1>
-          <p>Here&apos;s what&apos;s happening across your enterprise today.</p>
+          <h1>Enterprise Overview</h1>
+          <p>Live counts for tenant <strong>{tenantId}</strong>. No sample company data is preloaded.</p>
         </div>
         <div className="hero-time">
           <strong>{now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</strong>
           <span>{formatTime(now)}</span>
-          <small>Yangon Time</small>
+          <small>Local time</small>
         </div>
       </section>
 
-      <section className="kpi-strip">
-        {kpis.map(({ label, value, change, icon: Icon }) => (
-          <article key={label}>
-            <Icon size={20} />
-            <div><span>{label}</span><strong>{value}</strong><small>↗ {change}</small></div>
-          </article>
-        ))}
-      </section>
-
-      <section className="dashboard-middle">
-        <article className="operations-map panel">
-          <div className="panel-heading"><h2>Group Operations Overview <small>LIVE</small></h2><button>Last 30 Days <ChevronDown size={13} /></button></div>
-          <div className="map-canvas">
-            <div className="map-glow" />
-            {[
-              ['Construction', '92%', 'construction'],
-              ['Energy', '98%', 'energy'],
-              ['Manufacturing', '96%', 'manufacturing'],
-              ['Logistics', '94%', 'logistics'],
-              ['Hotels', '97%', 'hospitality'],
-              ['Agriculture', '93%', 'agriculture'],
-            ].map(([label, value, type]) => (
-              <button className={`facility facility-${type}`} key={label} onClick={() => navigate(label)}>
-                <span>{label}</span><strong>{value}</strong>
+      {loadError ? (
+        <section className="dashboard-empty-state" role="alert">
+          <strong>Dashboard unavailable</strong><span>{loadError}</span>
+        </section>
+      ) : !summary ? (
+        <section className="dashboard-empty-state" role="status">Loading workspace data…</section>
+      ) : (
+        <>
+          <section className="kpi-strip">
+            {kpis.map(({ label, value, icon: Icon, navigateTo }) => (
+              <button key={label} onClick={() => navigate(navigateTo)}>
+                <Icon size={20} />
+                <div><span>{label}</span><strong>{value.toLocaleString()}</strong><small>From connected records</small></div>
               </button>
             ))}
-          </div>
-        </article>
+          </section>
 
-        <article className="performance panel">
-          <div className="panel-heading"><h2>Business Performance</h2><div className="chart-legend"><span><i /> Revenue</span><span><i /> Profit</span><span><i /> Growth</span></div></div>
-          <svg className="performance-chart" viewBox="0 0 440 145" preserveAspectRatio="none">
-            {[20, 55, 90, 125].map((y) => <line key={y} x1="0" x2="440" y1={y} y2={y} />)}
-            <polyline className="line-cyan" points={chartPoints[1]} />
-            <polyline className="line-purple" points={chartPoints[0]} />
-            <polyline className="line-blue" points="0,115 55,108 110,96 165,100 220,88 275,72 330,78 385,64 440,52" />
-          </svg>
-          <div className="chart-months"><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span></div>
-        </article>
+          <section className="dashboard-middle">
+            <article className="operations-map panel">
+              <div className="panel-heading"><h2>Workspace Data</h2><span>{summary.tenant_id}</span></div>
+              <div className="workspace-data-list">
+                <div><span>All registered agents</span><strong>{summary.counts.agents}</strong></div>
+                <div><span>Pending platform events</span><strong>{summary.counts.pending_events}</strong></div>
+                <div><span>Stored documents and objects</span><strong>{summary.counts.stored_objects}</strong></div>
+                <div><span>Finance data sources</span><strong>0 connected</strong></div>
+              </div>
+              <p>Financial totals remain unavailable until a finance source is connected.</p>
+            </article>
+            <article className="performance panel">
+              <div className="panel-heading"><h2>Business Data</h2><span>Awaiting connected records</span></div>
+              <div className="dashboard-empty-state">
+                <strong>Revenue, expenses, and forecasts: no data</strong>
+                <span>Import verified company records to enable financial analysis.</span>
+                <button onClick={() => navigate('Reports & Analytics')}>Open Business Intelligence</button>
+              </div>
+            </article>
+          </section>
 
-        {assistantOpen && (
-          <article className="assistant panel">
-            <div className="assistant-heading"><div><Sparkles size={17} /> AI Assistant</div><button onClick={() => setAssistantOpen(false)}><X size={15} /></button></div>
-            <div className="assistant-status"><span /> Online</div>
-            <div className="assistant-messages">
-              {assistantMessages.slice(-4).map((message, index) => (
-                <div className={index % 2 === 1 ? 'user-message' : ''} key={`${message}-${index}`}>{message}</div>
-              ))}
-            </div>
-            <button className="assistant-action" onClick={() => setAssistantMessages((messages) => [...messages, 'Show group financial summary'])}>Show group financial summary <span>→</span></button>
-            <button className="assistant-action" onClick={() => setAssistantMessages((messages) => [...messages, 'Analyze project risks'])}>Analyze project risks <span>→</span></button>
-            <div className="assistant-input">
-              <input value={assistantText} onChange={(event) => setAssistantText(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && sendAssistantMessage()} placeholder="Ask anything..." />
-              <button onClick={sendAssistantMessage}>➤</button>
-            </div>
-          </article>
-        )}
-      </section>
-
-      <section className="dashboard-bottom">
-        <article className="quick-modules panel">
-          <div className="panel-heading"><div><h2>Key Modules</h2><p>Quick Access to Your Business Applications</p></div><button className="view-all">View All <span>→</span></button></div>
-          <div className="module-grid">
-            {moduleCards.map(({ label, icon: Icon }) => (
-              <button key={label} onClick={() => navigate(label)}>
-                <Icon size={21} /><span>{label}</span>
-              </button>
-            ))}
-          </div>
-        </article>
-        <article className="activity-panel panel">
-          <div className="panel-heading"><h2>Real-Time Activity</h2><button className="view-all">View All <span>→</span></button></div>
-          {[
-            ['10:20 AM', 'Fuel station #23 transaction completed', 'MMK 12,500,000'],
-            ['10:18 AM', 'New project approved', 'Yangon Development'],
-            ['10:15 AM', 'AI agent processed 1,248 documents', 'Engineering Dept'],
-            ['10:12 AM', 'New employee onboarded', 'Aung Myat'],
-          ].map(([time, title, detail]) => (
-            <button className="activity-row" key={time} onClick={() => navigate('Reports & Analytics')}>
-              <i /><div><strong>{time}</strong><span>{title}</span><small>{detail}</small></div>
-            </button>
-          ))}
-        </article>
-        <article className="health-panel panel">
-          <div className="panel-heading"><h2>System Health</h2><span className="health-status">● All Systems Healthy</span></div>
-          <div className="health-rings">
-            {[['99.9%', 'Uptime'], ['96%', 'Performance'], ['98%', 'Security']].map(([value, label]) => (
-              <div key={label}><div><strong>{value}</strong></div><span>{label}</span></div>
-            ))}
-          </div>
-        </article>
-      </section>
+          <section className="dashboard-bottom">
+            <article className="quick-modules panel">
+              <div className="panel-heading"><div><h2>Key Modules</h2><p>Open a workspace to connect or enter company data.</p></div></div>
+              <div className="module-grid">
+                {moduleCards.map(({ label, icon: Icon }) => (
+                  <button key={label} onClick={() => navigate(label)}>
+                    <Icon size={21} /><span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </article>
+            <article className="activity-panel panel">
+              <div className="panel-heading"><h2>Recent Activity</h2></div>
+              <p className="dashboard-no-activity">No activity recorded for this workspace yet.</p>
+            </article>
+          </section>
+        </>
+      )}
     </div>
   )
 }
@@ -1045,11 +1124,17 @@ function WorkflowAutomationStudio() {
     { id: 'notify', type: 'API', name: 'Notify Procurement' },
     { id: 'end', type: 'End', name: 'Request Completed' },
   ])
-  const [inbox, setInbox] = useState([
-    { id: 'WF-4821', title: 'Marketing equipment purchase', requester: 'Zaw Lin', sla: '2h 14m', priority: 'High' },
-    { id: 'WF-4818', title: 'Supplier contract approval', requester: 'Thiri Moe', sla: '34m', priority: 'Critical' },
-    { id: 'WF-4812', title: 'Annual budget adjustment', requester: 'Su Mon', sla: '1d 5h', priority: 'Normal' },
-  ])
+  type HumanTask = {
+    task_id: string
+    execution_id: string
+    name: string
+    assignee: string
+    status: string
+    decision?: string
+  }
+  const [inbox, setInbox] = useState<HumanTask[]>([])
+  const [inboxError, setInboxError] = useState('')
+  const [inboxLoading, setInboxLoading] = useState(false)
 
   const notify = (message: string) => {
     setToast(message)
@@ -1058,7 +1143,7 @@ function WorkflowAutomationStudio() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/v1/workflow/definitions')
+    fetch(apiUrl('/api/v1/workflow/definitions'))
       .then(async (response) => {
         if (!response.ok) throw new Error(`Workflow service returned ${response.status}`)
         return response.json() as Promise<WorkflowRecord[]>
@@ -1085,7 +1170,7 @@ function WorkflowAutomationStudio() {
 
   const saveWorkflow = async () => {
     const response = await fetch(
-      workflowId ? `/api/v1/workflow/definitions/${workflowId}` : '/api/v1/workflow/definitions',
+      apiUrl(workflowId ? `/api/v1/workflow/definitions/${workflowId}` : '/api/v1/workflow/definitions'),
       {
         method: workflowId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1105,7 +1190,7 @@ function WorkflowAutomationStudio() {
   const runWorkflow = async () => {
     const workflow = await saveWorkflow()
     const response = await fetch(
-      `/api/v1/workflow/executions?workflow_id=${encodeURIComponent(workflow.workflow_id)}`,
+      apiUrl(`/api/v1/workflow/executions?workflow_id=${encodeURIComponent(workflow.workflow_id)}`),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1119,7 +1204,7 @@ function WorkflowAutomationStudio() {
 
   const deployWorkflow = async () => {
     const workflow = await saveWorkflow()
-    const response = await fetch(`/api/v1/workflow/definitions/${workflow.workflow_id}/deploy`, {
+    const response = await fetch(apiUrl(`/api/v1/workflow/definitions/${workflow.workflow_id}/deploy`), {
       method: 'POST',
     })
     if (!response.ok) throw new Error(`Could not deploy workflow (${response.status})`)
@@ -1141,9 +1226,33 @@ function WorkflowAutomationStudio() {
     notify(`${type} node added to the process`)
   }
 
-  const completeTask = (id: string) => {
-    setInbox((current) => current.filter((task) => task.id !== id))
-    notify(`${id} approved and sent to the next process step`)
+  const loadInbox = useCallback(async () => {
+    setInboxLoading(true)
+    setInboxError('')
+    try {
+      const response = await fetch(apiUrl('/api/v1/workflow/tasks'))
+      if (!response.ok) throw new Error(`Could not load workflow tasks (${response.status}).`)
+      setInbox(await response.json() as HumanTask[])
+    } catch (error) {
+      setInboxError(error instanceof Error ? error.message : 'Could not load workflow tasks.')
+    } finally {
+      setInboxLoading(false)
+    }
+  }, [])
+
+  const completeTask = async (task: HumanTask, decision: 'approved' | 'changes_requested') => {
+    const query = new URLSearchParams({ decision })
+    try {
+      const response = await fetch(apiUrl(`/api/v1/workflow/tasks/${encodeURIComponent(task.task_id)}/complete?${query}`), {
+        method: 'POST',
+      })
+      if (!response.ok) throw new Error(`Could not update task (${response.status}).`)
+      const updated = await response.json() as HumanTask
+      setInbox((current) => current.map((item) => item.task_id === updated.task_id ? updated : item))
+      notify(`${task.name}: ${decision.replaceAll('_', ' ')} saved`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not update workflow task.')
+    }
   }
 
   const selected = nodes.find((node) => node.id === selectedNode) || nodes[0]
@@ -1168,8 +1277,15 @@ function WorkflowAutomationStudio() {
 
       <div className="workflow-tabs">
         {(['Designer', 'Inbox', 'Versions', 'History', 'Simulation'] as const).map((tab) => (
-          <button className={activeTab === tab ? 'active' : ''} key={tab} onClick={() => setActiveTab(tab)}>
-            {tab}{tab === 'Inbox' && <span>{inbox.length}</span>}
+          <button
+            className={activeTab === tab ? 'active' : ''}
+            key={tab}
+            onClick={() => {
+              setActiveTab(tab)
+              if (tab === 'Inbox') void loadInbox()
+            }}
+          >
+            {tab}{tab === 'Inbox' && <span>{inbox.filter((task) => task.status === 'pending').length}</span>}
           </button>
         ))}
       </div>
@@ -1281,17 +1397,22 @@ function WorkflowAutomationStudio() {
 
       {activeTab === 'Inbox' && (
         <div className="process-inbox">
-          <header><div><strong>Human Task Inbox</strong><span>{inbox.length} tasks awaiting action</span></div><button onClick={() => notify('Inbox filter applied')}><Search size={13} /> Filter</button></header>
-          {inbox.map((task) => (
-            <div className="inbox-row" key={task.id}>
-              <span className={`inbox-priority ${task.priority.toLowerCase()}`}><UserRound size={14} /></span>
-              <div><strong>{task.title}</strong><span>{task.id} · Requested by {task.requester}</span></div>
-              <span><Clock3 size={12} /> SLA {task.sla}</span>
-              <b className={task.priority.toLowerCase()}>{task.priority}</b>
-              <button onClick={() => completeTask(task.id)}>Review & Approve</button>
+          <header><div><strong>Human Task Inbox</strong><span>{inbox.filter((task) => task.status === 'pending').length} pending tasks</span></div><button onClick={() => void loadInbox()} disabled={inboxLoading}><RotateCcw size={13} /> Refresh</button></header>
+          {inboxError && <div className="inbox-empty" role="alert">{inboxError}</div>}
+          {inboxLoading && <div className="inbox-empty">Loading workflow tasks…</div>}
+          {!inboxLoading && inbox.filter((task) => task.status === 'pending').map((task) => (
+            <div className="inbox-row" key={task.task_id}>
+              <span className="inbox-priority normal"><UserRound size={14} /></span>
+              <div><strong>{task.name}</strong><span>{task.task_id} · Assigned to {task.assignee}</span></div>
+              <span>Execution {task.execution_id}</span>
+              <b className="normal">Pending</b>
+              <div>
+                <button onClick={() => void completeTask(task, 'changes_requested')}>Request changes</button>
+                <button onClick={() => void completeTask(task, 'approved')}>Approve</button>
+              </div>
             </div>
           ))}
-          {inbox.length === 0 && <div className="inbox-empty"><CheckCircle2 size={22} /><strong>No pending tasks</strong><span>The human approval queue is clear.</span></div>}
+          {!inboxLoading && !inboxError && inbox.filter((task) => task.status === 'pending').length === 0 && <div className="inbox-empty"><CheckCircle2 size={22} /><strong>No pending tasks</strong><span>Starting a workflow with a User task creates an approval here.</span></div>}
         </div>
       )}
 
@@ -1851,15 +1972,17 @@ function ModuleView({ name, records, addRecord, exportRecords, navigate, isSetti
           </div>
           <div className="data-table">
             <div className="data-row data-header"><span>Name</span><span>Owner</span><span>Status</span><span>Updated</span><span /></div>
-            {(filtered.length ? filtered : [
-              { name: `${name} Overview`, owner: 'Aung Min Htet', status: 'Active', updated: 'Today' },
-              { name: 'Group Operations Record', owner: 'Enterprise Team', status: 'Processing', updated: 'Today' },
-            ]).map((record, index) => (
+            {filtered.length ? filtered.map((record, index) => (
               <div className="data-row" key={`${record.name}-${index}`}>
                 <strong>{record.name}</strong><span>{record.owner}</span><span className="record-status">{record.status}</span><span>{record.updated}</span>
                 <button title="More options"><MoreHorizontal size={16} /></button>
               </div>
-            ))}
+            )) : (
+              <div className="data-empty-state">
+                <strong>{records.length ? 'No matching records' : 'No records yet'}</strong>
+                <span>Records created in this workspace will appear here.</span>
+              </div>
+            )}
           </div>
         </section>
       )}
